@@ -12,7 +12,8 @@ let data,
   mobile = false,
   attachment = null,
   sending = false,
-  request = 0;
+  request = 0,
+  composerObserver;
 const drafts = new Map();
 export async function api(path, body) {
   const r = await fetch("/api" + path, {
@@ -227,15 +228,16 @@ function renderList() {
       .join("") || '<p class="no-results">Ничего не найдено</p>';
 }
 function renderWorkspace() {
+  composerObserver?.disconnect();
   const w = document.querySelector(".workspace");
   if (!w) return;
   if (section === "settings") {
-    w.innerHTML = `<div class="settings-panel"><h1 class="section-title">Настройки</h1><p class="section-subtitle">Твоё пространство общения</p><button class="setting-row" data-action="own-profile">${avatar(data.user)}<span>${e(data.user.name)}<small>@${e(data.user.username)}</small></span>${icon("user")}</button><label class="setting-row">Компактная навигация<input id="compact" type="checkbox" ${collapsed ? "checked" : ""}></label><p class="presence-note">Данные хранятся на этом компьютере. Для настоящих СМС и звонков через интернет потребуется подключение серверных сервисов.</p><button class="secondary danger-text" data-action="logout">Выйти из аккаунта</button></div>`;
+    w.innerHTML = `<div class="settings-panel">${ib("back", "Назад к чатам", "back")}<h1 class="section-title">Настройки</h1><p class="section-subtitle">Твоё пространство общения</p><button class="setting-row" data-action="own-profile">${avatar(data.user)}<span>${e(data.user.name)}<small>@${e(data.user.username)}</small></span>${icon("user")}</button><label class="setting-row">Компактная навигация<input id="compact" type="checkbox" ${collapsed ? "checked" : ""}></label><p class="presence-note">Данные хранятся на этом компьютере. Для настоящих СМС и звонков через интернет потребуется подключение серверных сервисов.</p><button class="secondary danger-text" data-action="logout">Выйти из аккаунта</button></div>`;
     document.querySelector("#compact").onchange = () => toggleRail();
     return;
   }
   if (section === "calls") {
-    w.innerHTML = `<div class="settings-panel"><h1 class="section-title">Звонки</h1><p class="section-subtitle">Голосом бывает проще</p><button class="primary" data-action="new-chat">Выбрать собеседника</button><div class="calls-list">${
+    w.innerHTML = `<div class="settings-panel">${ib("back", "Назад к чатам", "back")}<h1 class="section-title">Звонки</h1><p class="section-subtitle">Голосом бывает проще</p><button class="primary" data-action="new-chat">Выбрать собеседника</button><div class="calls-list">${
       data.calls
         .map((c) => {
           const p = data.contacts.find((p) => p.id === c.peerId);
@@ -249,9 +251,13 @@ function renderWorkspace() {
     return;
   }
   if (section === "media") {
-    w.innerHTML =
-      '<div class="settings-panel"><h1 class="section-title">Медиа</h1><p class="section-subtitle">Вложения из твоих переписок</p><div class="media-grid">Загрузка…</div></div>';
+    w.innerHTML = `<div class="settings-panel">${ib("back", "Назад к чатам", "back")}<h1 class="section-title">Медиа</h1><p class="section-subtitle">Вложения из твоих переписок</p><div class="media-grid">Загрузка…</div></div>`;
     loadMedia();
+    return;
+  }
+  if (section === "archive" && !chat()?.archived) {
+    w.innerHTML =
+      '<div class="empty-state"><h2>Архив пуст</h2><p>Здесь будут переписки, которые ты отправишь в архив.</p></div>';
     return;
   }
   if (!chat()) {
@@ -277,6 +283,15 @@ function renderWorkspace() {
     }
   };
   w.querySelector("#file").onchange = readAttachment;
+  const box = w.querySelector(".message-list");
+  composerObserver = new ResizeObserver(([entry]) => {
+    const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 90;
+    const reserve = entry.target.getBoundingClientRect().height + 20;
+    box.style.paddingBottom = `${reserve}px`;
+    box.style.scrollPaddingBottom = `${reserve}px`;
+    if (atBottom) box.scrollTo({ top: box.scrollHeight, behavior: "instant" });
+  });
+  composerObserver.observe(w.querySelector(".composer-region"));
   loadMessages(true);
 }
 async function loadMessages(scroll) {
@@ -304,7 +319,13 @@ async function loadMessages(scroll) {
           )
           .join("")
       : `<div class="empty-state">${icon("bookmark")}<h2>${chat().kind === "saved" ? "Всё важное — здесь" : "Начни разговор"}</h2><p>${chat().kind === "saved" ? "Сообщения и файлы видны только тебе." : "Напиши первое сообщение."}</p></div>`;
-    if (scroll || bottom) box.scrollTop = box.scrollHeight;
+    if (scroll || bottom) {
+      const composer = document.querySelector('.composer-region');
+      const reserve = (composer?.getBoundingClientRect().height || 100) + 24;
+      box.style.paddingBottom = `${reserve}px`;
+      box.style.scrollPaddingBottom = `${reserve}px`;
+      box.scrollTo({ top: box.scrollHeight, behavior: "instant" });
+    }
   } catch (err) {
     toast(err.message);
   }
@@ -436,6 +457,7 @@ document.addEventListener("click", async (ev) => {
     if (b.dataset.chat) {
       selected = b.dataset.chat;
       section = section === "archive" ? "archive" : "chats";
+      location.hash = section;
       mobile = true;
       attachment = null;
       render();
@@ -446,6 +468,7 @@ document.addEventListener("click", async (ev) => {
       await refresh();
       selected = v.chat.id;
       section = "chats";
+      location.hash = section;
       mobile = true;
       dialog.close();
       render();
