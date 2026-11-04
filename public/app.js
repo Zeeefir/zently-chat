@@ -12,6 +12,7 @@ let data,
   mobile = false,
   attachment = null,
   sending = false,
+  connected = false,
   request = 0,
   composerObserver;
 const drafts = new Map();
@@ -115,6 +116,7 @@ function connect() {
   source.onmessage = async (ev) => {
     const v = JSON.parse(ev.data);
     if (v.type === "connected") {
+      setConnectionStatus(true);
       await refresh();
       if (["chats", "saved", "archive"].includes(section))
         await loadMessages(false);
@@ -135,6 +137,7 @@ function connect() {
     document.querySelector(".connection-banner")?.remove();
   };
   source.onerror = () => {
+    setConnectionStatus(false);
     if (!document.querySelector(".connection-banner"))
       document
         .querySelector(".workspace")
@@ -144,7 +147,23 @@ function connect() {
         );
   };
 }
+function setConnectionStatus(value) {
+  connected = value;
+  const label = value ? 'В сети' : 'Не в сети';
+  const badge = document.querySelector('.account-presence');
+  if (badge) {
+    badge.classList.toggle('is-online', value);
+    badge.setAttribute('aria-label', label);
+    badge.title = label;
+  }
+  const text = document.querySelector('.account-name small');
+  if (text) {
+    text.textContent = label;
+    text.classList.toggle('is-offline', !value);
+  }
+}
 function auth(error = "") {
+  connected = false;
   source?.close();
   root.innerHTML = `<section class="auth-page"><div class="auth-card"><div class="auth-logo">${logo()}</div><span class="small-label">БЛИЖЕ ДРУГ К ДРУГУ</span><h1>Твой круг.<br>Твои разговоры.</h1><p class="intro">Создай аккаунт или вернись по номеру телефона.</p><form id="identity"><div class="field"><label for="username">Имя пользователя</label><input id="username" name="username" autocomplete="username" placeholder="например, stas" minlength="3" maxlength="24" required pattern="[a-zA-Z][a-zA-Z0-9_]{2,23}"></div><div class="field"><label for="phone">Номер телефона</label><input id="phone" name="phone" type="tel" autocomplete="tel" placeholder="+7 999 123 45 67" required></div><p class="field-error" role="alert">${e(error)}</p><button class="primary" type="submit">Продолжить ${icon("back")}</button></form><p class="dev-tag">Локальная версия: код появится на экране. СМС пока не отправляются.</p><button class="secondary" data-action="demo">Посмотреть демо</button></div></section>`;
   validateForms();
@@ -196,7 +215,7 @@ const navs = [
   ["settings", "settings", "Настройки"],
 ];
 function render() {
-  root.innerHTML = `<div class="app-shell ${collapsed ? "collapsed" : ""} ${mobile ? "mobile-chat" : ""}"><aside class="sidebar"><div class="sidebar-head">${logo()}<button class="collapse-button icon-button" data-action="collapse" aria-label="Свернуть меню">${icon(collapsed ? "expand" : "collapse")}</button></div><nav class="navigation" aria-label="Основная навигация">${navs.map(([id, ic, label]) => `<button class="nav-button ${section === id ? "active" : ""}" data-section="${id}" title="${label}" ${section === id ? 'aria-current="page"' : ""}>${icon(ic)}<span class="nav-label">${label}</span></button>`).join("")}</nav><button class="account-button" data-action="own-profile" aria-label="Мой профиль">${avatar(data.user)}<span class="account-name"><strong>${e(data.user.name)}</strong><small class="online">В сети</small></span>${icon("more")}</button></aside><aside class="conversation-panel"><div class="list-tools"><label class="search-wrap">${icon("search")}<input id="search" aria-label="Поиск чатов" placeholder="Поиск…" value="${e(query)}"></label>${ib("plus", "Новый чат", "new-chat")}</div><div class="conversation-list"></div><div class="list-footer">Локальная версия · демо-контакты отмечены</div></aside><section class="workspace" aria-label="Рабочая область"></section></div>`;
+  root.innerHTML = `<div class="app-shell ${collapsed ? "collapsed" : ""} ${mobile ? "mobile-chat" : ""}"><aside class="sidebar"><div class="sidebar-head">${logo()}<button class="collapse-button icon-button" data-action="collapse" aria-label="Свернуть меню">${icon(collapsed ? "expand" : "collapse")}</button></div><nav class="navigation" aria-label="Основная навигация">${navs.map(([id, ic, label]) => `<button class="nav-button ${section === id ? "active" : ""}" data-section="${id}" title="${label}" ${section === id ? 'aria-current="page"' : ""}>${icon(ic)}<span class="nav-label">${label}</span></button>`).join("")}</nav><button class="account-button" data-action="own-profile" aria-label="Мой профиль"><span class="account-avatar">${avatar(data.user)}<span class="account-presence ${connected ? "is-online" : ""}" role="img" aria-label="${connected ? "В сети" : "Не в сети"}" title="${connected ? "В сети" : "Не в сети"}"></span></span><span class="account-name"><strong>${e(data.user.name)}</strong><small class="online ${connected ? "" : "is-offline"}">${connected ? "В сети" : "Не в сети"}</small></span>${icon("more")}</button></aside><aside class="conversation-panel"><div class="list-tools"><label class="search-wrap">${icon("search")}<input id="search" aria-label="Поиск чатов" placeholder="Поиск…" value="${e(query)}"></label>${ib("plus", "Новый чат", "new-chat")}</div><div class="conversation-list"></div><div class="list-footer">Локальная версия · демо-контакты отмечены</div></aside><section class="workspace" aria-label="Рабочая область"></section></div>`;
   renderList();
   renderWorkspace();
   document.querySelector("#search").oninput = (ev) => {

@@ -1756,6 +1756,24 @@ dialog::backdrop {
 }
 
 /* Floating glass controls; message surfaces remain opaque. */
+.account-avatar {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.account-presence {
+  position: absolute;
+  right: -1px;
+  bottom: 0;
+  width: 13px;
+  height: 13px;
+  border: 2px solid var(--bg);
+  border-radius: 50%;
+  background: #77717d;
+}
+.account-presence.is-online { background: var(--lime); }
+.online.is-offline { color: var(--muted); }
+.online.is-offline:before { background: #77717d; }
 .workspace:has(.composer-region) .message-list {
   padding-bottom: 120px;
   scroll-padding-bottom: 120px;
