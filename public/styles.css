@@ -1750,8 +1750,49 @@ dialog::backdrop {
 }
 .field input:focus-visible,
 .field textarea:focus-visible,
-.composer textarea:focus-visible,
 .search-wrap input:focus-visible {
   outline: 2px solid var(--lime) !important;
   outline-offset: 2px;
+}
+
+/* Floating glass controls; message surfaces remain opaque. */
+.own .bubble {
+  border-color: #ff399f;
+  box-shadow: inset 0 1px 5px #ff82c15c, inset 0 -1px 3px #ff149359,
+    0 0 5px #ff149345, 0 0 17px #ff14932e;
+}
+.composer { align-items: center; gap: 12px; }
+.composer-field, .composer .composer-plus {
+  background: linear-gradient(145deg, #ffffff17 0%, #ffffff07 44%, #ffffff03 100%);
+  border: 1px solid #ffffff1f;
+  box-shadow: inset 0 1px 0 #ffffff20, inset 0 -1px 0 #ffffff05, 0 8px 24px #00000030;
+  backdrop-filter: blur(24px) saturate(140%);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  transition: border-color .2s, box-shadow .2s, background .2s;
+}
+.composer-field { min-height: 52px; border-radius: 28px; padding: 5px 9px 5px 20px; }
+.composer .composer-plus { width: 52px; height: 52px; border-radius: 50%; color: #f5f3f7; }
+.composer .composer-plus:hover { background: linear-gradient(145deg, #ffffff25, #ffffff09); border-color: #ffffff40; }
+.composer-field:focus-within {
+  border-color: #b7ff3970;
+  box-shadow: inset 0 1px 0 #ffffff26, inset 0 -1px 0 #ffffff08, 0 0 0 3px #b7ff390c, 0 8px 24px #00000030;
+}
+.composer textarea:focus-visible { outline: none !important; box-shadow: none; }
+.composer .composer-plus:focus-visible { outline: 2px solid var(--lime); outline-offset: 4px; }
+.bubble-wrap:not(.own) .bubble {
+  background: radial-gradient(ellipse at 0% 50%, #ff14931a, transparent 58%), linear-gradient(130deg, #2d252e, #211b23);
+  box-shadow: -5px 0 18px -8px #ff14935c, 0 3px 10px #00000020;
+}
+.bubble-wrap:not(.own) .bubble:before {
+  top: 13px; bottom: 13px; width: 2px;
+  background: linear-gradient(transparent, #ff6cb8 20%, #ff1493 50%, #ff1493 80%, transparent);
+  box-shadow: 0 0 5px #ff1493b3, 0 0 13px #ff149373, 3px 0 22px #ff14934d;
+}
+@media (max-width: 720px) {
+  .composer { gap: 8px; }
+  .composer .composer-plus { width: 44px; height: 44px; }
+  .composer-field { min-height: 46px; padding: 3px 7px 3px 14px; }
+}
+@media (forced-colors: active) {
+  .composer-field:focus-within { outline: 2px solid Highlight; }
 }

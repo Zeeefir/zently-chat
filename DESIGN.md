@@ -19,3 +19,5 @@ Desktop: three panels. Compact desktop: collapsed rail. Mobile: conversation lis
 
 ## Verification
 Node integration tests exercise authentication, authorization, persistence, private saved messages and chat delivery. Browser checks cover registration, demo entry, sending, saved messages, search, profile and mobile navigation. Real cross-device calls require manual device verification and production STUN/TURN configuration.
+
+Composer refinement: rounded translucent glass for the attachment control and input capsule; focus highlights the capsule rather than the textarea rectangle. Incoming bubbles retain an opaque graphite fill with a restrained pink edge glow and local light spill.
