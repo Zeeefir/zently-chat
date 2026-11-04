@@ -1,1 +1,10 @@
 /.codex/
+
+# Local secrets and generated Go files
+.env
+.env.*
+!.env.example
+/api/bin/
+/api/tmp/
+/api/*.exe
+/api/coverage.out

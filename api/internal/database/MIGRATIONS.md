@@ -1,0 +1,56 @@
+# Миграции
+
+При запуске API после подключения к PostgreSQL вызывается database.Migrate.
+SQL-файлы из migrations/*.sql встраиваются в Go-бинарник через go:embed.
+После изменения SQL требуется пересобрать Docker-образ API.
+
+Файлы выполняются по имени (001_auth.sql, затем 002_...sql).
+Все новые миграции одного запуска выполняются в общей транзакции: при ошибке
+изменения откатываются, HTTP-сервер не запускается.
+Блокировка PostgreSQL не позволяет двум экземплярам одновременно менять схему.
+История и контрольные суммы хранятся в schema_migrations.
+
+Уже применённые файлы не редактируйте и не удаляйте: создавайте новые миграции.
+Автоматическое удаление таблиц и откат миграций не предусмотрены.
+
+## Проверка из корня проекта
+
+```powershell
+docker compose up -d --build --wait
+docker compose logs --tail=30 api
+docker compose exec -T db psql -U chat -d chat -c "\dt"
+docker compose exec -T db psql -U chat -d chat -c "\d users"
+docker compose exec -T db psql -U chat -d chat -c "\d sessions"
+docker compose exec -T db psql -U chat -d chat -c "SELECT name, applied_at FROM schema_migrations;"
+```
+
+Ожидается три таблицы: users, sessions, schema_migrations, и одна запись миграции.
+Перезапуск API не должен повторять миграцию:
+
+```powershell
+docker compose restart api
+docker compose exec -T db psql -U chat -d chat -c "SELECT count(*) FROM schema_migrations;"
+```
+
+Ожидается count=1. Проверка доступности:
+
+```powershell
+Invoke-RestMethod http://localhost:9090/api/ready
+```
+
+## Поля авторизации
+
+- users.id — UUID, генерируется PostgreSQL.
+- users.name — отображаемое имя, от 1 до 100 символов без учёта крайних пробелов.
+- users.email — уникальная почта в нижнем регистре без крайних пробелов;
+  полноценную проверку формата сделает обработчик регистрации.
+- users.password_hash — хеш пароля; исходный пароль не сохраняем.
+- sessions.user_id — ссылка на пользователя. При удалении пользователя его сессии удаляются.
+- sessions.token_hash — 32 байта SHA-256 от случайного токена сессии;
+  исходный токен будет только у клиента в cookie. Это не алгоритм хеширования пароля.
+- sessions.expires_at — срок действия, который будет проверяться при каждом запросе.
+- TIMESTAMPTZ — время конкретного момента с учётом часового пояса.
+
+Индекс user_id ускоряет поиск сессий пользователя, expires_at — очистку истёкших сессий.
+Сам индекс ничего не удаляет: логику очистки добавим отдельно.
+Маршруты регистрации и входа в этом блоке ещё не реализованы.

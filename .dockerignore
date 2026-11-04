@@ -1,0 +1,11 @@
+.git
+.codex
+.env
+.env.*
+**/.env
+**/.env.*
+**/node_modules
+**/bin
+**/tmp
+**/*.exe
+**/coverage.out
