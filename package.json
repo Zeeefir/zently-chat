@@ -1,0 +1,14 @@
+{
+  "name": "zently",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Zently messenger — local-first Node.js application",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "test": "node --test tests/*.test.js",
+    "check": "node --check server/index.js && node --check server/store.js && node --check public/app.js && node --check public/call.js"
+  }
+}
