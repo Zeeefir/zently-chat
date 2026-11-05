@@ -99,7 +99,7 @@ async function boot() {
   try {
     await refresh();
     calls.user = data.user;
-    if (location.hash === '#media') history.replaceState(null, '', '#chats');
+    if (location.hash === "#media") history.replaceState(null, "", "#chats");
     const initial = location.hash.slice(1);
     if (navs.some((n) => n[0] === initial)) {
       section = initial;
@@ -256,8 +256,12 @@ function renderWorkspace() {
   const w = document.querySelector(".workspace");
   if (!w) return;
   if (section === "settings") {
-    w.innerHTML = `<div class="settings-panel">${ib("back", "Назад к чатам", "back")}<h1 class="section-title">Настройки</h1><p class="section-subtitle">Твоё пространство общения</p><button class="setting-row" data-action="own-profile">${avatar(data.user)}<span>${e(data.user.name)}<small>@${e(data.user.username)}</small></span>${icon("user")}</button><label class="setting-row">Компактная навигация<input id="compact" type="checkbox" ${collapsed ? "checked" : ""}></label><p class="presence-note">Данные хранятся на этом компьютере. Для настоящих СМС и звонков через интернет потребуется подключение серверных сервисов.</p><button class="secondary danger-text" data-action="logout">Выйти из аккаунта</button></div>`;
+    w.innerHTML = `<div class="settings-panel">${ib("back", "Назад к чатам", "back")}<h1 class="section-title">Настройки</h1><p class="section-subtitle">Твоё пространство общения</p><button class="setting-row" data-action="own-profile">${avatar(data.user)}<span>${e(data.user.name)}<small>@${e(data.user.username)}</small></span>${icon("user")}</button><label class="setting-row">Компактная навигация<input id="compact" type="checkbox" ${collapsed ? "checked" : ""}></label><label class="setting-row">Звуки звонков<input id="call-sounds" type="checkbox" ${calls.sounds.enabled ? "checked" : ""}></label><button class="secondary" data-action="test-ring">Прослушать мелодию</button><p class="presence-note">Данные хранятся на этом компьютере. Для настоящих СМС и звонков через интернет потребуется подключение серверных сервисов.</p><button class="secondary danger-text" data-action="logout">Выйти из аккаунта</button></div>`;
     document.querySelector("#compact").onchange = () => toggleRail();
+    document.querySelector("#call-sounds").onchange = (ev) => {
+      calls.sounds.setEnabled(ev.target.checked);
+      localStorage.setItem("call-sounds", ev.target.checked ? "1" : "0");
+    };
     return;
   }
   if (section === "calls") {
@@ -525,6 +529,9 @@ document.addEventListener("click", async (ev) => {
         document.querySelector("#search").value = "";
         renderList();
         document.querySelector("#search").focus();
+        break;
+      case "test-ring":
+        await calls.previewRingtone();
         break;
       case "close-dialog":
         dialog.close();

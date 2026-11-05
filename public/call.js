@@ -1,7 +1,16 @@
 import { avatar, icon, escape as e, logo } from "./icons.js";
+import { CallSounds } from "./call-sounds.js";
 export class Calls {
   constructor({ api, toast, onClose }) {
     Object.assign(this, { api, toast, onClose });
+    this.sounds = new CallSounds({
+      enabled: localStorage.getItem("call-sounds") !== "0",
+    });
+    const unlock = () => {
+      this.sounds.unlock();
+    };
+    document.addEventListener("pointerdown", unlock, { once: true });
+    document.addEventListener("keydown", unlock, { once: true });
     this.root = document.querySelector("#call-root");
     this.root.addEventListener("click", (ev) => {
       const a = ev.target.closest("[data-call]")?.dataset.call;
@@ -9,24 +18,37 @@ export class Calls {
     });
   }
   async start(peer, video = true) {
-    if (this.peer) return;
+    if (this.peer || this.incoming) return;
+    clearTimeout(this.previewTimer);
     this.peer = peer;
     this.video = video;
     this.id = crypto.randomUUID();
     this.preview = !!peer.demo;
     this.queue = [];
     this.connected = false;
+    this.answered = false;
+    const callId = this.id;
     this.draw();
     if (this.preview) return;
+    this.sounds.unlock();
     try {
       await this.prepare();
       const offer = await this.pc.createOffer();
       await this.pc.setLocalDescription(offer);
       await this.signal("offer", { sdp: this.pc.localDescription, video });
+      if (this.id !== callId || this.answered || this.connected) return;
+      this.sounds.play("outgoing");
+      this.root.querySelector(".call-time").textContent = "Вызов…";
       this.timeout = setTimeout(() => {
-        this.error("Нет ответа. Можно завершить вызов и попробовать позже.");
+        if (this.id !== callId || this.answered || this.connected) return;
+        this.sounds.stop();
+        this.end().then(() =>
+          this.toast("Нет ответа. Попробуй позвонить позже."),
+        );
       }, 30000);
     } catch (err) {
+      if (this.id !== callId) return;
+      this.sounds.stop();
       this.error(err.message);
     }
   }
@@ -71,16 +93,20 @@ export class Calls {
     };
     this.pc.onconnectionstatechange = () => {
       if (this.pc?.connectionState === "connected") {
+        this.sounds.stop();
         clearTimeout(this.timeout);
         this.connected = true;
-        this.started = Date.now();
+        this.started ||= Date.now();
+        clearInterval(this.timer);
         this.timer = setInterval(() => this.status(), 1000);
         this.status();
       }
-      if (["failed", "disconnected"].includes(this.pc?.connectionState))
+      if (["failed", "disconnected"].includes(this.pc?.connectionState)) {
+        this.sounds.stop();
         this.error(
           "Соединение прервано. Для разных сетей потребуется TURN-сервер.",
         );
+      }
     };
   }
   status() {
@@ -104,10 +130,13 @@ export class Calls {
       this.incoming?.callId === v.callId
     ) {
       this.incoming = null;
+      this.sounds?.stop();
+      clearTimeout(this.incomingTimeout);
       this.incomingIce = [];
       const d = document.querySelector("#dialog");
       d.oncancel = null;
       d.close();
+      d.classList?.remove("incoming-call-dialog");
       this.toast("Вызов отменён");
       return;
     }
@@ -115,7 +144,7 @@ export class Calls {
       this.incomingIce.push(v.payload);
       return;
     }
-    if (v.kind === "offer" && this.peer) {
+    if (v.kind === "offer" && (this.peer || this.incoming)) {
       await this.api("/signal", {
         to: v.from.id,
         kind: "decline",
@@ -124,12 +153,17 @@ export class Calls {
       return;
     }
     if (v.kind === "offer" && !this.peer) {
+      clearTimeout(this.previewTimer);
       this.incoming = v;
       this.incomingIce = [];
+      const audible = this.sounds.play("incoming");
       const d = document.querySelector("#dialog");
-      d.innerHTML = `<div class="dialog-head"><h2 id="dialog-title">Входящий звонок</h2></div><div class="profile-hero">${avatar(v.from, "large")}<h3>${e(v.from.name)}</h3></div><div class="dialog-actions"><button class="secondary" id="decline">Отклонить</button><button class="primary" id="accept">Ответить</button></div>`;
+      d.classList.add("incoming-call-dialog");
+      d.innerHTML = `<div class="dialog-head"><h2 id="dialog-title">Входящий ${v.payload.video ? "видеозвонок" : "звонок"}</h2></div><div class="profile-hero">${avatar(v.from, "large")}<h3>${e(v.from.name)}</h3><p>@${e(v.from.username)}</p></div>${!audible && this.sounds.enabled ? '<button type="button" class="secondary enable-ring" id="enable-ring">Включить мелодию звонка</button>' : ""}<div class="dialog-actions"><button class="secondary" id="decline">${icon("close")} Отклонить</button><button class="primary" id="accept">${icon("phone")} Ответить</button></div>`;
       d.showModal();
       const decline = () => {
+        this.sounds.stop();
+        clearTimeout(this.incomingTimeout);
         this.incoming = null;
         this.incomingIce = [];
         this.api("/signal", {
@@ -137,11 +171,26 @@ export class Calls {
           kind: "decline",
           callId: v.callId,
         }).catch(() => {});
+        d.oncancel = null;
         d.close();
+        d.classList.remove("incoming-call-dialog");
       };
+      this.incomingTimeout = setTimeout(decline, 30000);
+      const enable = d.querySelector("#enable-ring");
+      if (enable)
+        enable.onclick = async () => {
+          if (await this.sounds.unlock()) {
+            this.sounds.play("incoming");
+            enable.remove();
+          }
+        };
       d.querySelector("#decline").onclick = decline;
       d.oncancel = decline;
       d.querySelector("#accept").onclick = async () => {
+        if (!this.incoming || this.incoming.callId !== v.callId) return;
+        this.sounds.stop();
+        clearTimeout(this.incomingTimeout);
+        d.classList.remove("incoming-call-dialog");
         d.oncancel = null;
         d.close();
         Object.assign(this, {
@@ -162,6 +211,7 @@ export class Calls {
           await this.pc.setLocalDescription(await this.pc.createAnswer());
           await this.signal("answer", { sdp: this.pc.localDescription });
         } catch (err) {
+          await this.signal("decline").catch(() => {});
           this.error(err.message);
         }
       };
@@ -170,6 +220,10 @@ export class Calls {
     if (v.callId !== this.id) return;
     try {
       if (v.kind === "answer") {
+        this.answered = true;
+        this.sounds.stop();
+        clearTimeout(this.timeout);
+        this.root.querySelector(".call-time").textContent = "Подключаем…";
         await this.pc.setRemoteDescription(v.payload.sdp);
         for (const c of this.queue) await this.pc.addIceCandidate(c);
         this.queue = [];
@@ -239,7 +293,22 @@ export class Calls {
         sender.replaceTrack(this.stream.getVideoTracks()[0]);
     }
   }
+  async previewRingtone() {
+    if (this.peer || this.incoming) return;
+    if (!this.sounds.enabled) {
+      this.toast("Сначала включи звуки звонков.");
+      return;
+    }
+    if (!(await this.sounds.unlock())) {
+      this.toast("Браузер пока не разрешил звук. Попробуй ещё раз.");
+      return;
+    }
+    clearTimeout(this.previewTimer);
+    this.sounds.play("incoming");
+    this.previewTimer = setTimeout(() => this.sounds.stop(), 2800);
+  }
   async end(notify = true) {
+    this.sounds?.stop();
     if (!this.peer) return;
     const peer = this.peer,
       id = this.id,

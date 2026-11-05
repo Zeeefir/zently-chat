@@ -1756,6 +1756,78 @@ dialog::backdrop {
 }
 
 /* Floating glass controls; message surfaces remain opaque. */
+.incoming-call-dialog .profile-hero {
+  padding: 12px 0;
+}
+.incoming-call-dialog .avatar {
+  border: 1px solid #b7ff3950;
+  box-shadow: 0 0 0 10px #b7ff3906;
+}
+.incoming-call-dialog .dialog-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.incoming-call-dialog .dialog-actions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 52px;
+  margin: 0;
+}
+.incoming-call-dialog #decline {
+  color: #ff96af;
+  border-color: #ff24503b;
+}
+.enable-ring {
+  width: 100%;
+  font-size: 12px;
+}
+@media (max-width: 720px) {
+  .chat-header .person-button {
+    flex: 1;
+    min-width: 0;
+  }
+  .chat-header .person-title strong {
+    max-width: 100%;
+  }
+  .chat-header .header-actions {
+    flex-shrink: 0;
+    margin-left: 0;
+  }
+  .call-controls {
+    bottom: max(22px, env(safe-area-inset-bottom));
+  }
+  .call-controls .icon-button {
+    width: 48px;
+    height: 48px;
+  }
+  .call-controls .end-call {
+    width: 52px;
+    height: 52px;
+  }
+  .call-top {
+    top: max(15px, env(safe-area-inset-top));
+  }
+  .self-video-box {
+    bottom: calc(118px + env(safe-area-inset-bottom));
+  }
+  .send-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .incoming-call-dialog {
+    padding: 24px 20px;
+  }
+  .incoming-call-dialog .dialog-actions {
+    gap: 10px;
+  }
+  .incoming-call-dialog .dialog-actions button {
+    padding: 0 10px;
+    font-size: 13px;
+  }
+}
 .field select {
   width: 100%;
   min-height: 54px;
