@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chat API — Swagger</title>
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.31.0/swagger-ui.css">
+</head>
+<body>
+  <div id="swagger-ui"></div>
+  <script src="https://unpkg.com/swagger-ui-dist@5.31.0/swagger-ui-bundle.js"></script>
+  <script>
+    SwaggerUIBundle({
+      url: '/swagger/openapi.json',
+      dom_id: '#swagger-ui',
+      withCredentials: true,
+      validatorUrl: null,
+      tryItOutEnabled: true
+    });
+  </script>
+</body>
+</html>

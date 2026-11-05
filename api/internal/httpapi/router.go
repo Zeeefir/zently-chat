@@ -4,13 +4,41 @@ import (
 	"net/http"
 
 	"newsChat/api/internal/auth"
+	"newsChat/api/internal/calls"
+	"newsChat/api/internal/chat"
+	"newsChat/api/internal/realtime"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func newRouter(db *pgxpool.Pool) http.Handler {
+func newRouter(db *pgxpool.Pool, publishers ...realtime.Publisher) http.Handler {
 	mux := http.NewServeMux()
+	registerDocs(mux)
 	h := &authHandlers{service: auth.New(db)}
+	var publisher realtime.Publisher = &realtime.Client{}
+	if len(publishers) > 0 {
+		publisher = publishers[0]
+	}
+	ch := &chatHandlers{store: chat.New(db), auth: h.service, publisher: publisher}
+	chatMux := http.NewServeMux()
+	callHandlers := &callHandlers{store: calls.New(db), publisher: publisher}
+	chatMux.HandleFunc("POST /api/conversations/{id}/calls", ch.signedIn(callHandlers.create))
+	chatMux.HandleFunc("GET /api/calls", ch.signedIn(callHandlers.active))
+	chatMux.HandleFunc("GET /api/calls/{callID}", ch.signedIn(callHandlers.get))
+	chatMux.HandleFunc("POST /api/calls/{callID}/actions", ch.signedIn(callHandlers.transition))
+	chatMux.HandleFunc("POST /api/calls/{callID}/signals", ch.signedIn(callHandlers.sendSignal))
+	chatMux.HandleFunc("GET /api/calls/{callID}/signals", ch.signedIn(callHandlers.signals))
+	chatMux.HandleFunc("GET /api/users", ch.signedIn(ch.searchUsers))
+	chatMux.HandleFunc("POST /api/conversations", ch.signedIn(ch.createConversation))
+	chatMux.HandleFunc("GET /api/conversations", ch.signedIn(ch.listConversations))
+	chatMux.HandleFunc("GET /api/conversations/{id}/messages", ch.signedIn(ch.listMessages))
+	chatMux.HandleFunc("POST /api/conversations/{id}/messages", ch.signedIn(ch.sendMessage))
+	chatMux.HandleFunc("GET /api/realtime/config", ch.signedIn(ch.realtimeConfig))
+	chatMux.HandleFunc("POST /api/pusher/auth", ch.signedIn(ch.pusherAuth))
+	protectedChat := protectAPI(chatMux, 120)
+	for _, pattern := range []string{"/api/users", "/api/conversations", "/api/conversations/", "/api/realtime/", "/api/pusher/", "/api/calls", "/api/calls/"} {
+		mux.Handle(pattern, protectedChat)
+	}
 	authMux := http.NewServeMux()
 	authMux.HandleFunc("POST /api/auth/register", h.register)
 	authMux.HandleFunc("POST /api/auth/login", h.login)

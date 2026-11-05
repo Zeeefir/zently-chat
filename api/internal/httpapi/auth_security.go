@@ -16,6 +16,10 @@ type authAttempt struct {
 
 // A bounded, per-process limiter. Proxy headers are deliberately not trusted.
 func protectAuth(next http.Handler) http.Handler {
+	return protectAPI(next, 20)
+}
+
+func protectAPI(next http.Handler, maxAttempts int) http.Handler {
 	var mu sync.Mutex
 	attempts := make(map[string]authAttempt)
 	origins := os.Getenv("ALLOWED_ORIGINS")
@@ -61,7 +65,7 @@ func protectAuth(next http.Handler) http.Handler {
 				}
 			}
 			a := attempts[ip]
-			blocked := a.count >= 20 || (a.count == 0 && len(attempts) >= 10000)
+			blocked := a.count >= maxAttempts || (a.count == 0 && len(attempts) >= 10000)
 			if !blocked {
 				if a.count == 0 {
 					a.until = now.Add(time.Minute)

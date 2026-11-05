@@ -1,5 +1,17 @@
 # Chat API
 
+Переписки, маршруты и подключение Pusher описаны в [api/CHAT.md](api/CHAT.md).
+Серверная часть звонков и инструкция для фронтенда — [api/CALLS.md](api/CALLS.md).
+
+## Swagger
+
+Интерактивная документация: http://localhost:9090/swagger/.
+Спецификация OpenAPI: http://localhost:9090/swagger/openapi.json.
+В Swagger выполните register, затем login, me и logout через Execute.
+Cookie сохраняется браузером автоматически. UI загружает JS/CSS Swagger UI 5.31.0
+из unpkg; для отображения документации нужен доступ к этому CDN.
+При добавлении новых маршрутов обновляйте api/internal/httpapi/docs/openapi.json.
+
 ## Запуск API и PostgreSQL в Docker
 
 Требуется запущенный Docker Desktop с Linux containers.

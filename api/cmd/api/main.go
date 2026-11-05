@@ -9,6 +9,7 @@ import (
 	"newsChat/api/internal/config"
 	"newsChat/api/internal/database"
 	"newsChat/api/internal/httpapi"
+	"newsChat/api/internal/realtime"
 )
 
 func main() {
@@ -33,7 +34,14 @@ func run(cfg config.Config) error {
 		return err
 	}
 
-	server := httpapi.NewServer(cfg, db)
+	publisher, err := realtime.FromEnv()
+	if err != nil {
+		return err
+	}
+	if !publisher.Enabled() {
+		log.Println("Pusher не настроен: HTTP-чат доступен, мгновенные события отключены")
+	}
+	server := httpapi.NewServer(cfg, db, publisher)
 	log.Printf("API запускается: http://localhost:%s", cfg.Port)
 
 	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
