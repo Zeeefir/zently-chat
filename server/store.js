@@ -1,11 +1,17 @@
 import { randomUUID } from "node:crypto";
 import { readFile, mkdir, writeFile, rename } from "node:fs/promises";
 import { dirname } from "node:path";
+import { parsePhoneNumberFromString } from "libphonenumber-js";
 
 export function validateIdentity(rawPhone, rawUsername) {
   const digits = String(rawPhone ?? "").replace(/\D/g, "");
-  if (!/^\d{10,15}$/.test(digits))
-    throw new Error("Укажите телефон: от 10 до 15 цифр с кодом страны.");
+  if (
+    !/^\d{7,15}$/.test(digits) ||
+    !parsePhoneNumberFromString(`+${digits}`)?.isPossible()
+  )
+    throw new Error(
+      "Проверьте телефон и код страны: нужен полный международный номер.",
+    );
   const username = String(rawUsername ?? "")
     .trim()
     .replace(/^@/, "")

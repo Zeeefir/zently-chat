@@ -13,3 +13,5 @@
 | Call | call.js | Explicit permission action; visible pending/denied/offline states; end releases all tracks |
 
 Message drafts are retained per chat in session memory. Messages are persisted on the local server. Optimistic duplicate sends are prevented by a client message id. Profile and settings are shared across screens. No claim of end-to-end encryption is made.
+
+Phone registration uses one composite field: country/calling-code trigger and national number. The authored country picker opens above the field, supports local country/code search, arrow navigation, Enter selection, Escape and outside dismissal. It remembers only the chosen country. Full international pasted numbers are normalized without adding the calling code twice. Region detection is an editable timezone/locale suggestion, not location verification.

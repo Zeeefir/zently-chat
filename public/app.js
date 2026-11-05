@@ -1,5 +1,7 @@
 import { icon, escape as e, logo, avatar, iconButton as ib } from "./icons.js";
 import { Calls } from "./call.js";
+import { normalizePhone } from "./phone.js";
+import { phoneFields, setupPhoneFields } from "./phone-input.js";
 const root = document.querySelector("#app"),
   dialog = document.querySelector("#dialog");
 let data,
@@ -149,23 +151,24 @@ function connect() {
 }
 function setConnectionStatus(value) {
   connected = value;
-  const label = value ? 'В сети' : 'Не в сети';
-  const badge = document.querySelector('.account-presence');
+  const label = value ? "В сети" : "Не в сети";
+  const badge = document.querySelector(".account-presence");
   if (badge) {
-    badge.classList.toggle('is-online', value);
-    badge.setAttribute('aria-label', label);
+    badge.classList.toggle("is-online", value);
+    badge.setAttribute("aria-label", label);
     badge.title = label;
   }
-  const text = document.querySelector('.account-name small');
+  const text = document.querySelector(".account-name small");
   if (text) {
     text.textContent = label;
-    text.classList.toggle('is-offline', !value);
+    text.classList.toggle("is-offline", !value);
   }
 }
 function auth(error = "") {
   connected = false;
   source?.close();
-  root.innerHTML = `<section class="auth-page"><div class="auth-card"><div class="auth-logo">${logo()}</div><span class="small-label">БЛИЖЕ ДРУГ К ДРУГУ</span><h1>Твой круг.<br>Твои разговоры.</h1><p class="intro">Создай аккаунт или вернись по номеру телефона.</p><form id="identity"><div class="field"><label for="username">Имя пользователя</label><input id="username" name="username" autocomplete="username" placeholder="например, stas" minlength="3" maxlength="24" required pattern="[a-zA-Z][a-zA-Z0-9_]{2,23}"></div><div class="field"><label for="phone">Номер телефона</label><input id="phone" name="phone" type="tel" autocomplete="tel" placeholder="+7 999 123 45 67" required></div><p class="field-error" role="alert">${e(error)}</p><button class="primary" type="submit">Продолжить ${icon("back")}</button></form><p class="dev-tag">Локальная версия: код появится на экране. СМС пока не отправляются.</p><button class="secondary" data-action="demo">Посмотреть демо</button></div></section>`;
+  root.innerHTML = `<section class="auth-page"><div class="auth-card"><div class="auth-logo">${logo()}</div><span class="small-label">БЛИЖЕ ДРУГ К ДРУГУ</span><h1>Твой круг.<br>Твои разговоры.</h1><p class="intro">Создай аккаунт или вернись по номеру телефона.</p><form id="identity"><div class="field"><label for="username">Имя пользователя</label><input id="username" name="username" autocomplete="username" placeholder="например, stas" minlength="3" maxlength="24" required pattern="[a-zA-Z][a-zA-Z0-9_]{2,23}"></div>${phoneFields()}<p class="field-error" role="alert">${e(error)}</p><button class="primary" type="submit">Продолжить ${icon("back")}</button></form><p class="dev-tag">Локальная версия: код появится на экране. СМС пока не отправляются.</p><button class="secondary" data-action="demo">Посмотреть демо</button></div></section>`;
+  setupPhoneFields();
   validateForms();
   document.querySelector("#identity").onsubmit = async (ev) => {
     ev.preventDefault();
@@ -174,6 +177,8 @@ function auth(error = "") {
     button.disabled = true;
     try {
       const values = Object.fromEntries(new FormData(f));
+      values.phone = normalizePhone(values.phone, values.country).number;
+      delete values.country;
       const result = await api("/auth/request", values);
       codeForm(result, values);
     } catch (err) {
@@ -339,7 +344,7 @@ async function loadMessages(scroll) {
           .join("")
       : `<div class="empty-state">${icon("bookmark")}<h2>${chat().kind === "saved" ? "Всё важное — здесь" : "Начни разговор"}</h2><p>${chat().kind === "saved" ? "Сообщения и файлы видны только тебе." : "Напиши первое сообщение."}</p></div>`;
     if (scroll || bottom) {
-      const composer = document.querySelector('.composer-region');
+      const composer = document.querySelector(".composer-region");
       const reserve = (composer?.getBoundingClientRect().height || 100) + 24;
       box.style.paddingBottom = `${reserve}px`;
       box.style.scrollPaddingBottom = `${reserve}px`;

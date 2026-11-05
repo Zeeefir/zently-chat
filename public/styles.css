@@ -1756,6 +1756,158 @@ dialog::backdrop {
 }
 
 /* Floating glass controls; message surfaces remain opaque. */
+.field select {
+  width: 100%;
+  min-height: 54px;
+  padding: 14px 16px;
+  color: var(--text);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 17px;
+}
+.phone-number {
+  display: flex;
+  align-items: center;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  padding-left: 18px;
+}
+.phone-prefix {
+  color: var(--text);
+  font-weight: 650;
+  white-space: nowrap;
+}
+.phone-field {
+  position: relative;
+}
+.phone-field .phone-number {
+  padding-left: 0;
+}
+.country-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 13px;
+  height: 40px;
+  margin: 6px 0 6px 4px;
+  background: transparent;
+  border-right: 1px solid var(--line);
+  color: var(--text);
+  flex-shrink: 0;
+  border-radius: 12px 0 0 12px;
+}
+.country-trigger:hover {
+  background: #ffffff07;
+}
+.country-iso {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 650;
+}
+.country-chevron {
+  width: 13px;
+  height: 13px;
+  color: var(--muted);
+  transition: transform 0.15s;
+}
+.country-trigger[aria-expanded="true"] .country-chevron {
+  transform: rotate(180deg);
+}
+.country-popover {
+  position: absolute;
+  bottom: calc(100% - 17px);
+  left: 0;
+  right: 0;
+  z-index: 5;
+  padding: 10px;
+  background: #211c23;
+  border: 1px solid #674254;
+  border-radius: 20px;
+  box-shadow: 0 -12px 48px #0009;
+}
+.country-popover[hidden] {
+  display: none;
+}
+.country-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #161218;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding-left: 12px;
+  margin-bottom: 7px;
+}
+.country-search .icon {
+  width: 17px;
+  height: 17px;
+  color: var(--muted);
+}
+.country-search input {
+  border: 0;
+  background: transparent;
+  border-radius: 12px;
+  min-height: 42px;
+  padding: 10px 8px;
+}
+.country-options {
+  max-height: min(240px, 30dvh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.country-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 10px;
+  border-radius: 10px;
+  background: transparent;
+  text-align: left;
+  font-size: 12px;
+}
+.country-option > span:first-child {
+  flex: 1;
+}
+.country-option .icon {
+  width: 15px;
+  height: 15px;
+  color: var(--lime);
+}
+.country-option:hover {
+  background: #ffffff08;
+}
+.country-option[aria-selected="true"] {
+  background: #ff149310;
+}
+.country-no-results {
+  padding: 15px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.phone-number input {
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  padding-left: 12px;
+}
+.phone-number:focus-within {
+  border-color: var(--lime);
+  box-shadow: 0 0 0 3px #b7ff3910;
+}
+.phone-number input:focus-visible {
+  outline: none !important;
+  box-shadow: none;
+}
+.phone-number:has(input[aria-invalid="true"]) {
+  border-color: var(--danger);
+}
+@media (forced-colors: active) {
+  .phone-number:focus-within {
+    outline: 2px solid Highlight;
+  }
+}
 .account-avatar {
   position: relative;
   display: inline-flex;
@@ -1771,9 +1923,15 @@ dialog::backdrop {
   border-radius: 50%;
   background: #77717d;
 }
-.account-presence.is-online { background: var(--lime); }
-.online.is-offline { color: var(--muted); }
-.online.is-offline:before { background: #77717d; }
+.account-presence.is-online {
+  background: var(--lime);
+}
+.online.is-offline {
+  color: var(--muted);
+}
+.online.is-offline:before {
+  background: #77717d;
+}
 .workspace:has(.composer-region) .message-list {
   padding-bottom: 120px;
   scroll-padding-bottom: 120px;
