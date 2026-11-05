@@ -9,7 +9,7 @@ export function messageStatus(message, chat, userId) {
     return {
       state: "delivered",
       label: "Доставлено, ещё не прочитано",
-      symbol: "check",
+      symbol: "checks",
     };
   return {
     state: "sent",

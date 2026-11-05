@@ -1774,7 +1774,7 @@ dialog::backdrop {
   min-height: 18px;
 }
 .message-meta .checks.status-sent .icon {
-  color: #f5d4e6;
+  color: #170a11;
 }
 .message-meta .checks.status-delivered .icon {
   color: #170a11;
