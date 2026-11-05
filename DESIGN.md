@@ -4,6 +4,7 @@
 A Russian-language messenger for personal conversations, saved notes, and calls. The two user-approved Figma references are authoritative; this is an implementation, not another redesign.
 
 ## Visual language
+User avatars show the first two characters of the account username, uppercased, rather than contact labels, display names, or uploaded/sample photos. The online badge remains a separate overlay. Saved messages retain the bookmark icon.
 Three connected panels: navigation, conversations, active chat. Expanded navigation has labels, collapsed navigation has accessible names and tooltips. No dashboard or news home page. A saved-messages conversation is owned by the current user alone.
 
 ## Tokens

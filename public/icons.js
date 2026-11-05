@@ -47,9 +47,9 @@ export function escape(s = "") {
 export const logo = () =>
   '<span class="brand"><img src="/assets/logo.svg" alt="" width="34" height="32"><span>zently</span></span>';
 export function avatar(user, cls = "") {
-  const name = user?.name || user?.username || "Вы";
-  const image = user?.avatar && /^[a-z-]+\.jpg$/.test(user.avatar);
-  return `<span class="avatar ${cls}">${image ? `<img src="/assets/${user.avatar}" alt="" loading="lazy">` : `<span>${escape(name.slice(0, 2).toUpperCase())}</span>`}</span>`;
+  const username = String(user?.username || "").trim().replace(/^@/, "");
+  const initials = Array.from(username).slice(0, 2).join("").toLocaleUpperCase("ru") || "?";
+  return `<span class="avatar ${cls}" aria-hidden="true"><span>${escape(initials)}</span></span>`;
 }
 export function iconButton(name, label, action, extra = "") {
   return `<button class="icon-button ${action === "back" ? "mobile-back" : ""} ${action === "attach" ? "composer-plus" : ""} ${action === "new-chat" ? "new-chat" : ""}" type="button" aria-label="${escape(label)}" title="${escape(label)}" data-action="${action}" ${extra.replace(/class="[^"]*"/g, "")}>${icon(name)}</button>`;

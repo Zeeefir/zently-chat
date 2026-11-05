@@ -54,7 +54,7 @@ function validateForms() {
           error.id = "form-error";
           error.textContent =
             invalid.name === "username"
-              ? "Имя: 3–24 латинских символа, цифры или _. Начни с буквы."
+              ? "Юзер: 3–24 латинских символа, цифры или _. Начни с буквы."
               : invalid.name === "code"
                 ? "Введи код из 6 цифр."
                 : "Заполни это поле.";
@@ -167,7 +167,7 @@ function setConnectionStatus(value) {
 function auth(error = "") {
   connected = false;
   source?.close();
-  root.innerHTML = `<section class="auth-page"><div class="auth-card"><div class="auth-logo">${logo()}</div><span class="small-label">БЛИЖЕ ДРУГ К ДРУГУ</span><h1>Твой круг.<br>Твои разговоры.</h1><p class="intro">Создай аккаунт или вернись по номеру телефона.</p><form id="identity"><div class="field"><label for="username">Имя пользователя</label><input id="username" name="username" autocomplete="username" placeholder="например, stas" minlength="3" maxlength="24" required pattern="[a-zA-Z][a-zA-Z0-9_]{2,23}"></div>${phoneFields()}<p class="field-error" role="alert">${e(error)}</p><button class="primary" type="submit">Продолжить ${icon("back")}</button></form><p class="dev-tag">Локальная версия: код появится на экране. СМС пока не отправляются.</p><button class="secondary" data-action="demo">Посмотреть демо</button></div></section>`;
+  root.innerHTML = `<section class="auth-page"><div class="auth-card"><div class="auth-logo">${logo()}</div><span class="small-label">БЛИЖЕ ДРУГ К ДРУГУ</span><h1>Твой круг.<br>Твои разговоры.</h1><p class="intro">Создай аккаунт или вернись по номеру телефона.</p><form id="identity"><div class="field"><label for="username">Придумайте юзер профиля</label><input id="username" name="username" autocomplete="username" placeholder="Например, stas_01" minlength="3" maxlength="24" required pattern="[a-zA-Z][a-zA-Z0-9_]{2,23}"></div>${phoneFields()}<p class="field-error" role="alert">${e(error)}</p><button class="primary" type="submit">Продолжить ${icon("back")}</button></form><p class="dev-tag">Локальная версия: код появится на экране. СМС пока не отправляются.</p><button class="secondary" data-action="demo">Посмотреть демо</button></div></section>`;
   setupPhoneFields();
   validateForms();
   document.querySelector("#identity").onsubmit = async (ev) => {
