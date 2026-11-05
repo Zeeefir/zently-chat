@@ -3,12 +3,15 @@ import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import Pusher from 'pusher-js'
-import { LogOut, MessageCircle, RefreshCw, Search, Send, Wifi } from 'lucide-react'
+import { LogOut, MessageCircle, RefreshCw, Search, Send, Wifi, Settings, Phone, ArrowLeft, Plus, Check, ChevronsLeft, ChevronsRight } from 'lucide-react'
+import { Brand, Avatar } from '@/Visual'
 import { api, errorText } from '@/api'
 import type { Conversation, Message, MessagePage, User } from '@/api'
 
 export default function App() {
   const cache = useQueryClient()
+  const [, refreshSessionView] = useState(0)
+  const sessionViewChanged = () => refreshSessionView(value => value + 1)
   const session = useQuery({
     queryKey: ['session'],
     queryFn: async () => {
@@ -31,19 +34,14 @@ export default function App() {
     return () => api.interceptors.response.eject(interceptor)
   }, [cache])
 
-  return <div className="mx-auto max-w-7xl p-4 sm:p-8">
-    <header className="mb-7 flex items-center gap-3">
-      <div className="rounded-2xl bg-teal-400/10 p-3 text-teal-300"><MessageCircle /></div>
-      <div><h1 className="text-xl font-bold">newsChat <span className="ml-2 text-xs font-normal text-slate-500">проверка API</span></h1>
-        <p className="mt-1 text-sm text-slate-400">Go · PostgreSQL · Pusher Channels</p></div>
-    </header>
-    {session.isPending ? <p role="status">Проверяем сессию…</p>
-      : session.isError ? <div className="notice">{errorText(session.error)} <button className="underline" onClick={() => void session.refetch()}>Повторить</button></div>
-      : session.data ? <Chat key={session.data.id} user={session.data} /> : <Auth />}
+  return <div className={session.data ? 'z-root' : 'z-auth-page'}>
+    {session.isPending ? <div className="z-loading" role="status"><Brand/><p>Открываем Zently…</p></div>
+      : session.isError ? <div className="z-auth-card"><Brand/><p className="notice">{errorText(session.error)}</p><button className="secondary" onClick={() => void session.refetch()}>Повторить</button></div>
+      : session.data ? <Chat key={session.data.id} user={session.data} onSessionViewChanged={sessionViewChanged} /> : <Auth onSessionViewChanged={sessionViewChanged} />}
   </div>
 }
 
-function Auth() {
+function Auth({onSessionViewChanged}:{onSessionViewChanged:()=>void}) {
   const cache = useQueryClient()
   const [register, setRegister] = useState(false)
   const [name, setName] = useState('')
@@ -54,28 +52,33 @@ function Auth() {
       if (register) await api.post('/auth/register', { name, email, password })
       return (await api.post<{ user: User }>('/auth/login', { email, password })).data.user
     },
-    onSuccess: (user) => { cache.clear(); cache.setQueryData(['session'], user) },
+    onSuccess: (user) => { cache.clear(); cache.setQueryData(['session'], user); onSessionViewChanged() },
   })
-  return <section className="mx-auto mt-12 max-w-md rounded-3xl border border-slate-800 bg-slate-900/40 p-7">
-    <h2 className="text-2xl font-semibold">{register ? 'Создать аккаунт' : 'Войти в чат'}</h2>
-    <p className="mb-6 mt-2 text-sm text-slate-400">Для проверки создайте два аккаунта в разных браузерах.</p>
-    <form className="space-y-4" onSubmit={(event) => { event.preventDefault(); auth.mutate() }}>
-      {register && <label className="block text-sm">Имя<input className="mt-2" required maxLength={100} value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" /></label>}
-      <label className="block text-sm">Почта<input className="mt-2" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" /></label>
-      <label className="block text-sm">Пароль<input className="mt-2" type="password" required minLength={12} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={register ? 'new-password' : 'current-password'} /></label>
-      <p className="text-xs text-slate-500">От 12 до 72 байт. Для теста используйте 12–72 латинских символа.</p>
+  return <section className="z-auth-card">
+    <Brand/><p className="z-eyebrow">БЛИЖЕ ДРУГ К ДРУГУ</p><h1>{register ? <>Твой круг.<br/>Твои разговоры.</> : <>С возвращением<br/>в Zently.</>}</h1>
+    <p className="z-muted">{register ? 'Создай профиль и будь на связи.' : 'Войди, чтобы продолжить разговор.'}</p>
+    <form className="z-auth-form" onSubmit={(event) => { event.preventDefault(); auth.mutate() }}>
+      {register && <label>Имя профиля<input required maxLength={100} value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" placeholder="Как к тебе обращаться" /></label>}
+      <label>Почта<input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" placeholder="you@example.com" /></label>
+      <label>Пароль<input type="password" required minLength={12} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={register ? 'new-password' : 'current-password'} placeholder="Не менее 12 символов" /></label>
+      <p className="z-field-help">От 12 до 72 байт. Латинские буквы и цифры.</p>
       {auth.isError && <p className="notice" role="alert">{errorText(auth.error)}{register && ' Если аккаунт уже создался, переключитесь на вход.'}</p>}
-      <button className="primary w-full" disabled={auth.isPending}>{auth.isPending ? 'Подождите…' : register ? 'Зарегистрироваться и войти' : 'Войти'}</button>
+      <button className="primary" disabled={auth.isPending}>{auth.isPending ? 'Подождите…' : register ? 'Создать аккаунт' : 'Войти'}<ArrowLeft className="z-arrow-forward" size={18}/></button>
     </form>
-    <button className="mt-5 text-sm text-teal-300" onClick={() => { setRegister(!register); auth.reset() }}>{register ? 'Уже есть аккаунт? Войти' : 'Нет аккаунта? Зарегистрироваться'}</button>
+    <button className="z-auth-switch" onClick={() => { setRegister(!register); auth.reset() }}>{register ? 'Уже есть аккаунт? Войти' : 'Нет аккаунта? Создать профиль'}</button>
   </section>
 }
 
-function Chat({ user }: { user: User }) {
+function Chat({ user, onSessionViewChanged }: { user: User; onSessionViewChanged:()=>void }) {
   const cache = useQueryClient()
   const [selected, setSelected] = useState<Conversation | null>(null)
   const [search, setSearch] = useState('')
   const [query, setQuery] = useState('')
+  const [uiSection, setUiSection] = useState<'chats'|'calls'|'settings'>('chats')
+  const [compact, setCompact] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [mobileChat, setMobileChat] = useState(false)
+  const [soundsEnabled,setSoundsEnabled] = useState(()=>localStorage.getItem('zently-call-sounds')!=='0')
   const dialogs = useInfiniteQuery({
     queryKey: ['conversations'], initialPageParam: '',
     queryFn: async ({ pageParam }) => (await api.get<{ conversations: Conversation[]; next_cursor: string }>('/conversations', { params: { limit: 30, before: pageParam || undefined } })).data,
@@ -87,42 +90,41 @@ function Chat({ user }: { user: User }) {
   })
   const create = useMutation({
     mutationFn: async (id: string) => (await api.post<{ conversation: Conversation }>('/conversations', { user_id: id })).data.conversation,
-    onSuccess: (dialog) => { setSelected(dialog); setQuery(''); setSearch(''); void cache.invalidateQueries({ queryKey: ['conversations'] }) },
+    onSuccess: (dialog) => { setSelected(dialog); setUiSection('chats'); setMobileChat(true); setSearchOpen(false); setQuery(''); setSearch(''); void cache.invalidateQueries({ queryKey: ['conversations'] }) },
   })
   const logout = useMutation({
     mutationFn: () => api.post('/auth/logout', {}),
-    onSuccess: () => { cache.clear(); cache.setQueryData(['session'], null) },
+    onSuccess: () => { cache.clear(); cache.setQueryData(['session'], null); onSessionViewChanged() },
   })
 
-  return <>
-    <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-      <p className="text-sm text-slate-400">Вы вошли как <strong className="text-white">{user.name}</strong></p>
-      <button className="secondary" disabled={logout.isPending} onClick={() => logout.mutate()}><LogOut size={16} />Выйти</button>
+  return <div data-ui-section={uiSection} className={'z-shell'+(compact?' is-compact':'')+(mobileChat?' has-mobile-chat':'')}>
+    <aside className="z-sidebar"><div className="z-sidebar-head"><Brand/><button className="z-icon z-collapse" aria-label={compact?'Развернуть меню':'Свернуть меню'} onClick={()=>setCompact(!compact)}>{compact?<ChevronsRight size={18}/>:<ChevronsLeft size={18}/>}</button></div>
+      <nav aria-label="Основная навигация">
+        <button className={uiSection==='chats'?'is-active':''} title="Чаты" onClick={()=>{setUiSection('chats');setMobileChat(false)}}><MessageCircle/><span>Чаты</span></button>
+        <button className={uiSection==='calls'?'is-active':''} title="Звонки" onClick={()=>{setUiSection('calls');setMobileChat(true)}}><Phone/><span>Звонки</span></button>
+        <button className={uiSection==='settings'?'is-active':''} title="Настройки" onClick={()=>{setUiSection('settings');setMobileChat(true)}}><Settings/><span>Настройки</span></button>
+      </nav>
+      <button className="z-account" aria-label="Мой профиль" onClick={()=>{setUiSection('settings');setMobileChat(true)}}><Avatar user={user}/><span><strong>{user.name}</strong><small>Мой профиль</small></span></button>
+    </aside>
+    <aside className="z-dialogs"><div className="z-list-top"><span>Чаты</span><div><button className="z-icon" aria-label="Обновить переписки" onClick={()=>void dialogs.refetch()}><RefreshCw size={16}/></button><button className="z-icon" aria-label="Найти человека" onClick={()=>setSearchOpen(!searchOpen)}><Plus/></button></div></div>
+      <form className="z-search" onSubmit={(e)=>{e.preventDefault();setQuery(search.trim());setSearchOpen(true)}}><Search size={18}/><input aria-label="Поиск пользователя" placeholder="Имя или точная почта" value={search} onChange={e=>setSearch(e.target.value)} minLength={2} maxLength={100} required/>{search && <button type="button" className="z-clear" aria-label="Очистить поиск" onClick={()=>{setSearch('');setQuery('')}}>×</button>}<button className="z-icon" aria-label="Найти"><ArrowLeft size={16} className="z-arrow-forward"/></button></form>
+      {searchOpen && <div className="z-search-results">{!query&&<p className="z-field-help">Введи имя профиля или точную почту и нажми стрелку.</p>}{users.isFetching&&<p role="status">Поиск…</p>}{users.isError&&<p className="notice">{errorText(users.error)}</p>}{query&&users.data?.length===0&&<p>Никого не найдено.</p>}{query&&users.data?.map(peer=><button className="z-contact" key={peer.id} disabled={create.isPending} onClick={()=>create.mutate(peer.id)}><Avatar user={peer}/><span>{peer.name}</span><MessageCircle size={17}/></button>)}</div>}
+      {create.isError&&<p className="notice">{errorText(create.error)}</p>}
+      <div className="z-conversation-list">{dialogs.isError&&<p className="notice">{errorText(dialogs.error)}</p>}{dialogs.isPending&&<p className="z-empty-copy" role="status">Загрузка…</p>}
+        {dialogs.data?.pages.flatMap(page=>page.conversations).map(dialog=><button key={dialog.id} onClick={()=>{setSelected(dialog);setUiSection('chats');setMobileChat(true)}} className={'z-conversation'+(selected?.id===dialog.id?' is-selected':'')}><Avatar user={dialog.participant}/><span><strong>{dialog.participant.name}</strong><small>Открыть переписку</small></span></button>)}
+        {dialogs.data?.pages[0].conversations.length===0&&<div className="z-empty-copy"><MessageCircle/><p>Твой круг начинается здесь.</p><small>Найди человека по имени или почте.</small></div>}
+        {dialogs.hasNextPage&&<button className="secondary" disabled={dialogs.isFetchingNextPage} onClick={()=>void dialogs.fetchNextPage()}>Ещё переписки</button>}
+      </div>
+    </aside>
+    <div className="z-workspace">
+      <button className="z-mobile-back z-icon" aria-label="Назад к чатам" onClick={()=>{setMobileChat(false);setUiSection('chats')}}><ArrowLeft size={20}/></button>
+      {selected&&<div className="z-message-view" hidden={uiSection!=='chats'}><Messages key={selected.id} conversation={selected} user={user}/></div>}
+      {uiSection==='settings'?<section className="z-settings"><h1>Настройки</h1><div className="z-profile"><Avatar user={user} large/><h2>{user.name}</h2><p className="z-muted">Личный профиль</p></div><label className="z-setting-row">Компактное меню<input type="checkbox" checked={compact} onChange={e=>setCompact(e.target.checked)}/></label><label className="z-setting-row">Звуки звонков<input type="checkbox" checked={soundsEnabled} onChange={e=>{setSoundsEnabled(e.target.checked);localStorage.setItem("zently-call-sounds",e.target.checked?"1":"0")}}/></label><p className="z-muted">Вход в аккаунт — по почте и паролю.</p>{logout.isError&&<p className="notice">{errorText(logout.error)}</p>}<button className="secondary z-danger" disabled={logout.isPending} onClick={()=>logout.mutate()}><LogOut size={17}/>Выйти из аккаунта</button></section>
+      :uiSection==='calls'?<section className="z-call-lobby"><Phone size={40}/><h1>Ближе голосом</h1><p className="z-muted">{selected?'Начни видеозвонок с '+selected.participant.name:'Выбери переписку, чтобы позвонить.'}</p><p className="z-field-help">Кнопка звонка появится, когда выберешь собеседника.</p></section>
+      :!selected?<div className="z-empty"><MessageCircle size={46}/><h1>На одной волне</h1><p>Выбери разговор или найди человека,<br/>с которым хочешь быть на связи.</p></div>:null}
     </div>
-    {logout.isError && <p className="notice mb-4">{errorText(logout.error)}</p>}
-    <CallPanel user={user} selected={selected} />
-    <div className="grid min-h-[65vh] overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/30 md:grid-cols-[300px_1fr]">
-      <aside className="border-b border-slate-800 p-5 md:border-b-0 md:border-r">
-        <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); setQuery(search.trim()) }}>
-          <input aria-label="Поиск пользователя" placeholder="Имя или точная почта" value={search} onChange={(e) => setSearch(e.target.value)} minLength={2} maxLength={100} required />
-          <button className="secondary" aria-label="Найти"><Search size={18} /></button>
-        </form>
-        {users.isFetching && <p className="mt-3 text-sm text-slate-400">Поиск…</p>}
-        {users.isError && <p className="notice mt-3">{errorText(users.error)}</p>}
-        {query && users.data?.length === 0 && <p className="mt-3 text-sm text-slate-400">Никого не найдено.</p>}
-        {users.data && query && <div className="mt-3 space-y-2">{users.data.map((peer) => <button key={peer.id} disabled={create.isPending} onClick={() => create.mutate(peer.id)} className="secondary w-full justify-between">{peer.name}<span className="text-xs text-teal-300">Написать</span></button>)}</div>}
-        {create.isError && <p className="notice mt-3">{errorText(create.error)}</p>}
-        <div className="mb-3 mt-7 flex items-center justify-between"><h2 className="font-semibold">Переписки</h2><button className="text-slate-400" aria-label="Обновить переписки" onClick={() => void dialogs.refetch()}><RefreshCw size={16} /></button></div>
-        {dialogs.isError && <p className="notice">{errorText(dialogs.error)}</p>}
-        {dialogs.isPending && <p className="text-sm text-slate-400">Загрузка…</p>}
-        {dialogs.data?.pages.flatMap((page) => page.conversations).map((dialog) => <button key={dialog.id} onClick={() => setSelected(dialog)} className={'mb-2 flex w-full items-center gap-3 rounded-xl px-3 py-4 text-left text-sm ' + (selected?.id === dialog.id ? 'bg-teal-400/10 text-teal-200' : 'hover:bg-slate-800')}>
-          <MessageCircle size={18} />{dialog.participant.name}</button>)}
-        {dialogs.data?.pages[0].conversations.length === 0 && <p className="text-sm text-slate-500">Найдите собеседника, чтобы начать.</p>}
-        {dialogs.hasNextPage && <button className="secondary w-full" disabled={dialogs.isFetchingNextPage} onClick={() => void dialogs.fetchNextPage()}>Ещё переписки</button>}
-      </aside>
-      {selected ? <Messages key={selected.id} conversation={selected} user={user} /> : <div className="flex min-h-64 flex-col items-center justify-center gap-4 p-8 text-center text-slate-500"><MessageCircle size={40} /><p>Выберите переписку или найдите собеседника.</p><p className="max-w-sm text-xs">Выберите диалог, чтобы отправить сообщение или позвонить.</p></div>}
-    </div>
-  </>
+    <CallPanel user={user} selected={selected} soundsEnabled={soundsEnabled} conversations={dialogs.data?.pages.flatMap(page=>page.conversations)||[]}/>
+  </div>
 }
 
 function Messages({ conversation, user }: { conversation: Conversation; user: User }) {
@@ -202,30 +204,17 @@ function Messages({ conversation, user }: { conversation: Conversation; user: Us
   useEffect(() => { bottom.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }) }, [latest])
   function submit(event: FormEvent) { event.preventDefault(); if (body.trim() && !send.isPending) send.mutate(body.trim()) }
 
-  return <section className="flex min-w-0 flex-col">
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 p-5">
-      <div><h2 className="font-semibold">{conversation.participant.name}</h2><p className="mt-1 flex items-center gap-2 text-xs text-slate-400"><Wifi size={13} />{status}</p></div>
-      <button className="secondary" onClick={() => void history.refetch()} disabled={history.isFetching}><RefreshCw size={15} />История</button>
+  return <section className="z-messages">
+    <header className="z-chat-header"><Avatar user={conversation.participant}/><div><h2>{conversation.participant.name}</h2><p>{status.includes('подписка активна')?'Соединение установлено':'Личная переписка'}</p></div><button className="z-icon z-history" title="Обновить историю" aria-label="Обновить историю" onClick={()=>void history.refetch()} disabled={history.isFetching}><RefreshCw size={18}/></button></header>
+    <div className="z-message-scroll">
+      {history.hasNextPage&&<button className="secondary z-older" disabled={history.isFetchingNextPage} onClick={()=>void history.fetchNextPage()}>Более ранние сообщения</button>}
+      {history.isPending&&<p className="z-empty-copy" role="status">Загружаем историю…</p>}{history.isError&&<p className="notice">{errorText(history.error)}</p>}
+      {!history.isPending&&!history.isError&&messages.length===0&&<div className="z-empty-copy"><p>Начни разговор</p><small>Напиши первое сообщение.</small></div>}
+      {messages.map(message=><div key={message.id} className={'z-bubble-row'+(message.sender_id===user.id?' is-own':'')}><div className="z-bubble"><p>{message.body}</p><div className="z-message-meta"><time>{new Date(message.created_at).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</time>{message.sender_id===user.id&&<Check size={16} aria-label="Сохранено на сервере"/>}</div></div></div>)}<div ref={bottom}/>
     </div>
-    <p className="border-b border-slate-800 px-5 py-2 text-xs text-slate-500" aria-live="polite">Получено событий Pusher: {events}. Автоопрос сообщений выключен.</p>
-    <div className="h-[45vh] min-h-72 overflow-y-auto p-5">
-      {history.hasNextPage && <button className="secondary mb-5 w-full" disabled={history.isFetchingNextPage} onClick={() => void history.fetchNextPage()}>Более ранние сообщения</button>}
-      {history.isPending && <p className="text-sm text-slate-400">Загружаем историю…</p>}
-      {history.isError && <p className="notice">{errorText(history.error)}</p>}
-      {!history.isPending && !history.isError && messages.length === 0 && <p className="py-12 text-center text-sm text-slate-500">Напишите первое сообщение.</p>}
-      {messages.map((message) => <div key={message.id} className={'mb-3 flex ' + (message.sender_id === user.id ? 'justify-end' : 'justify-start')}>
-        <div className={'max-w-[85%] rounded-2xl px-4 py-3 ' + (message.sender_id === user.id ? 'bg-teal-400/15 text-teal-50' : 'bg-slate-800')}>
-          <p className="whitespace-pre-wrap break-words text-sm [overflow-wrap:anywhere]">{message.body}</p>
-          <p className="mt-1 text-right text-[10px] text-slate-500">{new Date(message.created_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</p>
-        </div></div>)}
-      <div ref={bottom} />
-    </div>
-    <form className="mt-auto space-y-3 border-t border-slate-800 p-5" onSubmit={submit}>
-      {send.isError && <p className="notice" role="alert">{errorText(send.error)} Повторите отправку: прежний идентификатор сохранён.</p>}
-      <div className="flex items-end gap-3"><textarea aria-label="Сообщение" placeholder="Напишите сообщение…" rows={2} maxLength={1000} value={body} disabled={send.isPending} onChange={(e) => setBody(e.target.value)} /><button className="primary shrink-0" aria-label="Отправить сообщение" disabled={!body.trim() || send.isPending}><Send size={18} /></button></div>
-      <p className="text-xs text-slate-500" role="status">{send.isPending ? 'Отправляем…' : delivery || 'До 1000 символов. Отправка кнопкой со стрелкой.'}</p>
+    <form className="z-composer-region" onSubmit={submit}>{send.isError&&<p className="notice" role="alert">{errorText(send.error)} Повторите отправку: прежний идентификатор сохранён.</p>}
+      <div className="z-composer"><div className="z-composer-field"><textarea aria-label="Сообщение" placeholder="Сообщение…" rows={1} maxLength={1000} value={body} disabled={send.isPending} onChange={e=>setBody(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();e.currentTarget.form?.requestSubmit()}}}/></div><button className="z-send" aria-label="Отправить сообщение" disabled={!body.trim()||send.isPending}><Send size={23}/></button></div>
+      <details className="z-connection"><summary><Wifi size={11}/>{send.isPending?'Отправляем…':'Состояние соединения'}</summary><p role="status">{status}</p><p>Получено событий: {events}. {delivery||'До 1000 символов. Enter — отправить, Shift+Enter — новая строка.'}</p></details>
     </form>
   </section>
 }
-
-
