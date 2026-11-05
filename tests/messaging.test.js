@@ -81,6 +81,25 @@ test("two accounts exchange live messages, attachments, reactions and private ar
       "note.pdf",
     );
     assert.equal(
+      (await post(`/chats/${chat.id}/receipts`, { through: message.id }, cb))
+        .status,
+      200,
+    );
+    let receiptMessage = (
+      await get(`/chats/${chat.id}/messages`, ca)
+    ).messages.at(-1);
+    assert.ok(receiptMessage.deliveredTo[ub.id]);
+    assert.equal(receiptMessage.readBy, undefined);
+    await post(
+      `/chats/${chat.id}/receipts`,
+      { through: message.id, read: true },
+      cb,
+    );
+    receiptMessage = (await get(`/chats/${chat.id}/messages`, ca)).messages.at(
+      -1,
+    );
+    assert.ok(receiptMessage.readBy[ub.id]);
+    assert.equal(
       (
         await post(
           `/chats/${chat.id}/reaction`,

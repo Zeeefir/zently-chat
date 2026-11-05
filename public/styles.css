@@ -1756,6 +1756,33 @@ dialog::backdrop {
 }
 
 /* Floating glass controls; message surfaces remain opaque. */
+.people-search {
+  margin: 18px 0 10px;
+}
+.people-search:focus-within {
+  border-color: #b7ff3970;
+  box-shadow: 0 0 0 3px #b7ff390a;
+}
+.people-search input:focus-visible {
+  outline: none !important;
+}
+.people-search [hidden] {
+  display: none;
+}
+#people-count {
+  font-size: 11px;
+  min-height: 18px;
+}
+.message-meta .checks.status-sent .icon {
+  color: #f5d4e6;
+}
+.message-meta .checks.status-delivered .icon {
+  color: #170a11;
+}
+.message-meta .checks.status-read .icon,
+.message-meta .checks.status-saved .icon {
+  color: var(--lime);
+}
 .incoming-call-dialog .profile-hero {
   padding: 12px 0;
 }

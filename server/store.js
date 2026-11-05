@@ -203,8 +203,52 @@ export class Store {
       );
   }
   messages(userId, chatId) {
-    this.member(userId, chatId);
-    return this.data.messages.filter((m) => m.chatId === chatId).slice(-500);
+    const chat = this.member(userId, chatId);
+    const peer = chat.members.find((id) => id !== userId);
+    const list = this.data.messages
+      .filter((m) => m.chatId === chatId)
+      .slice(-500);
+    return list.map((m, i) => {
+      // Seeded conversations demonstrate a past reply, never fake live receipts.
+      if (
+        m.sample &&
+        m.sender === userId &&
+        this.user(peer)?.demo &&
+        list.slice(i + 1).some((next) => next.sample && next.sender === peer)
+      ) {
+        return {
+          ...m,
+          deliveredTo: { ...m.deliveredTo, [peer]: m.createdAt },
+          readBy: { ...m.readBy, [peer]: m.createdAt },
+        };
+      }
+      return m;
+    });
+  }
+  receipt(userId, chatId, { through, read = false }) {
+    const chat = this.member(userId, chatId);
+    if (chat.kind === "saved") return false;
+    const list = this.data.messages.filter((m) => m.chatId === chatId);
+    const end = list.findIndex((m) => m.id === through);
+    if (end < 0) throw Error("Сообщение не найдено.");
+    let changed = false;
+    for (const m of list.slice(0, end + 1)) {
+      if (m.sender === userId) continue;
+      m.deliveredTo ||= {};
+      if (!m.deliveredTo[userId]) {
+        m.deliveredTo[userId] = new Date().toISOString();
+        changed = true;
+      }
+      if (read === true) {
+        m.readBy ||= {};
+        if (!m.readBy[userId]) {
+          m.readBy[userId] = new Date().toISOString();
+          changed = true;
+        }
+      }
+    }
+    if (changed) this.save();
+    return changed;
   }
   direct(userId, peerId) {
     if (!this.user(peerId) || peerId === userId)

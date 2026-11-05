@@ -1,5 +1,6 @@
 import { icon, escape as e, logo, avatar, iconButton as ib } from "./icons.js";
 import { Calls } from "./call.js";
+import { statusMarkup } from "./message-status.js";
 import { normalizePhone } from "./phone.js";
 import { phoneFields, setupPhoneFields } from "./phone-input.js";
 const root = document.querySelector("#app"),
@@ -16,7 +17,10 @@ let data,
   sending = false,
   connected = false,
   request = 0,
-  composerObserver;
+  composerObserver,
+  receiptObserver;
+const deliveredAcks = new Set(),
+  readAcks = new Set();
 const drafts = new Map();
 export async function api(path, body) {
   const r = await fetch("/api" + path, {
@@ -68,11 +72,19 @@ function validateForms() {
   }
 }
 function modal(html) {
+  receiptObserver?.disconnect();
   dialog.innerHTML = `<div class="dialog-head"><h2 id="dialog-title">${html.title}</h2>${ib("close", "Закрыть", "close-dialog")}</div>${html.body}`;
   validateForms();
   if (!dialog.open) dialog.showModal();
 }
-const calls = new Calls({ api, toast, onClose: () => refresh() });
+const calls = new Calls({
+  api,
+  toast,
+  onClose: () => {
+    observeReadMessages();
+    return refresh();
+  },
+});
 const time = (s) =>
   new Date(s).toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" });
 const chat = () => data?.chats.find((c) => c.id === selected);
@@ -86,6 +98,7 @@ const face = (c) =>
     : avatar(peer(c));
 async function refresh() {
   data = await api("/bootstrap");
+  acknowledgeDelivery();
   if (!selected)
     selected =
       data.chats.find((c) => c.peer?.id === "alina")?.id || data.chats[0]?.id;
@@ -253,6 +266,7 @@ function renderList() {
 }
 function renderWorkspace() {
   composerObserver?.disconnect();
+  receiptObserver?.disconnect();
   const w = document.querySelector(".workspace");
   if (!w) return;
   if (section === "settings") {
@@ -332,13 +346,13 @@ async function loadMessages(scroll) {
         messages
           .map(
             (m) =>
-              `<div class="bubble-wrap ${m.sender === data.user.id ? "own" : ""}"><div class="bubble">${m.attachment ? (m.attachment.type.startsWith("image/") ? `<a href="${e(m.attachment.data)}" download="${e(m.attachment.name)}"><img class="attachment-image" src="${e(m.attachment.data)}" alt="${e(m.attachment.name)}"></a>` : `<a class="attachment-file" href="${e(m.attachment.data)}" download="${e(m.attachment.name)}">${icon("file")}${e(m.attachment.name)} ${icon("download")}</a>`) : ""}${m.text ? `<p>${e(m.text)}</p>` : ""}<div class="message-meta">${Object.values(
+              `<div data-message-id="${m.id}" class="bubble-wrap ${m.sender === data.user.id ? "own" : ""}"><div class="bubble">${m.attachment ? (m.attachment.type.startsWith("image/") ? `<a href="${e(m.attachment.data)}" download="${e(m.attachment.name)}"><img class="attachment-image" src="${e(m.attachment.data)}" alt="${e(m.attachment.name)}"></a>` : `<a class="attachment-file" href="${e(m.attachment.data)}" download="${e(m.attachment.name)}">${icon("file")}${e(m.attachment.name)} ${icon("download")}</a>`) : ""}${m.text ? `<p>${e(m.text)}</p>` : ""}<div class="message-meta">${Object.values(
                 m.reactions || {},
               )
                 .map(e)
                 .join(
                   " ",
-                )}<time>${time(m.createdAt)}</time>${m.sender === data.user.id ? '<span class="checks" title="Сохранено на сервере">' + icon("check") + "</span>" : ""}</div><button class="message-menu icon-button" aria-label="Действия с сообщением" data-message="${m.id}">${icon("more")}</button></div></div>`,
+                )}<time>${time(m.createdAt)}</time>${m.sender === data.user.id ? statusMarkup(m, chat(), data.user.id) : ""}</div><button class="message-menu icon-button" aria-label="Действия с сообщением" data-message="${m.id}">${icon("more")}</button></div></div>`,
           )
           .join("")
       : `<div class="empty-state">${icon("bookmark")}<h2>${chat().kind === "saved" ? "Всё важное — здесь" : "Начни разговор"}</h2><p>${chat().kind === "saved" ? "Сообщения и файлы видны только тебе." : "Напиши первое сообщение."}</p></div>`;
@@ -349,10 +363,86 @@ async function loadMessages(scroll) {
       box.style.scrollPaddingBottom = `${reserve}px`;
       box.scrollTo({ top: box.scrollHeight, behavior: "instant" });
     }
+    observeReadMessages();
   } catch (err) {
     toast(err.message);
   }
 }
+function acknowledgeDelivery() {
+  if (!data) return;
+  const uid = data.user.id;
+  for (const c of data.chats) {
+    if (c.kind === "saved" || !c.last) continue;
+    const key = `${uid}:${c.id}:${c.last.id}`;
+    if (deliveredAcks.has(key)) continue;
+    deliveredAcks.add(key);
+    api(`/chats/${c.id}/receipts`, { through: c.last.id }).catch(() =>
+      deliveredAcks.delete(key),
+    );
+  }
+}
+function observeReadMessages() {
+  receiptObserver?.disconnect();
+  const box = document.querySelector(".message-list"),
+    c = chat(),
+    uid = data?.user.id;
+  if (
+    !box ||
+    !c ||
+    c.kind === "saved" ||
+    document.visibilityState !== "visible"
+  )
+    return;
+  const cid = c.id;
+  const bottom = Math.ceil(
+    document.querySelector(".composer-region")?.getBoundingClientRect()
+      .height || 100,
+  );
+  receiptObserver = new IntersectionObserver(
+    (entries) => {
+      if (
+        document.visibilityState !== "visible" ||
+        selected !== cid ||
+        dialog.open ||
+        document.querySelector("#app").inert
+      )
+        return;
+      const visible = entries
+        .filter(
+          (entry) =>
+            entry.isIntersecting &&
+            entry.intersectionRect.height >=
+              Math.min(40, entry.boundingClientRect.height),
+        )
+        .map((entry) =>
+          messages.find((m) => m.id === entry.target.dataset.messageId),
+        )
+        .filter((m) => m && m.sender !== uid && !m.readBy?.[uid]);
+      const last = visible
+        .sort((a, b) => messages.indexOf(a) - messages.indexOf(b))
+        .at(-1);
+      if (!last) return;
+      const key = `${uid}:${last.id}`;
+      if (readAcks.has(key)) return;
+      readAcks.add(key);
+      api(`/chats/${cid}/receipts`, { through: last.id, read: true }).catch(
+        () => readAcks.delete(key),
+      );
+    },
+    {
+      root: box,
+      rootMargin: `0px 0px -${bottom}px 0px`,
+      threshold: [0, 0.1, 0.5, 1],
+    },
+  );
+  box
+    .querySelectorAll("[data-message-id]")
+    .forEach((el) => receiptObserver.observe(el));
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") observeReadMessages();
+});
+dialog.addEventListener("close", observeReadMessages);
 async function send(ev) {
   ev.preventDefault();
   if (sending) return;
@@ -436,9 +526,42 @@ function profile(own = false) {
 async function contacts() {
   await refresh();
   modal({
-    title: "Новый разговор",
-    body: `<p class="muted">Выбери собеседника. Зарегистрированные пользователи этого сервера также появятся здесь.</p><div class="contacts-scroll">${data.contacts.map((p) => `<button class="contact-option" data-peer="${e(p.id)}">${avatar(p)}<span><strong>${e(p.name)}</strong><small>${p.demo ? "Демо-контакт" : "@" + e(p.username)}</small></span>${icon("chat")}</button>`).join("")}</div>`,
+    title: "Найти человека",
+    body: `<p class="muted">Введи юзер с @ или без него. Поиск среди пользователей этого сайта.</p><div class="people-search search-wrap">${icon("search")}<input id="people-query" aria-label="Поиск по юзеру" placeholder="@username" autocomplete="off" spellcheck="false">${ib("close", "Очистить поиск людей", "clear-people")}</div><p id="people-count" class="muted" role="status"></p><div class="contacts-scroll" id="people-results"></div>`,
   });
+  const input = dialog.querySelector("#people-query");
+  input.oninput = renderPeople;
+  dialog.querySelector("[data-action=clear-people]").onclick = () => {
+    input.value = "";
+    renderPeople();
+    input.focus();
+  };
+  renderPeople();
+  input.focus();
+}
+function renderPeople() {
+  const input = dialog.querySelector("#people-query");
+  if (!input) return;
+  const q = input.value.trim().replace(/^@/, "").toLowerCase();
+  const people = data.contacts
+    .filter((p) => p.username.toLowerCase().includes(q))
+    .sort(
+      (a, b) =>
+        Number(b.username === q) - Number(a.username === q) ||
+        a.username.localeCompare(b.username),
+    );
+  dialog.querySelector("[data-action=clear-people]").hidden = !input.value;
+  dialog.querySelector("#people-count").textContent = q
+    ? `Найдено: ${people.length}`
+    : "Зарегистрированные пользователи";
+  dialog.querySelector("#people-results").innerHTML =
+    people
+      .map(
+        (p) =>
+          `<button class="contact-option" data-peer="${e(p.id)}">${avatar(p)}<span><strong>@${e(p.username)}</strong><small>${e(p.name)}${p.demo ? " · демо" : ""}</small></span>${icon("chat")}</button>`,
+      )
+      .join("") ||
+    '<p class="no-results">Такой юзер не найден. Проверь написание.</p>';
 }
 function toggleRail() {
   collapsed = !collapsed;

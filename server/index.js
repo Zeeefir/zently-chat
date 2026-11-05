@@ -252,6 +252,14 @@ export async function createApp({
             return json(res, 200, { message });
           }
         }
+        const receiptPath = /^\/api\/chats\/([^/]+)\/receipts$/.exec(path);
+        if (receiptPath && req.method === "POST") {
+          const cid = receiptPath[1];
+          const changed = store.receipt(uid, cid, await body(req));
+          await store.flush();
+          if (changed) refresh(store.member(uid, cid));
+          return json(res, 200, { changed });
+        }
         const chatAction = /^\/api\/chats\/([^/]+)\/(archive|reaction)$/.exec(
           path,
         );
