@@ -180,7 +180,8 @@ export class CallController {
       pc.ontrack = (event) => {
         if (this.pc !== pc) return
         if (!remote.getTracks().some((track) => track.id === event.track.id)) remote.addTrack(event.track)
-        this.emit({ remote })
+        // Preserve the browser-provided stream association when available.
+        this.emit({ remote: event.streams[0] ?? remote })
       }
       pc.onicecandidate = (event) => {
         if (this.pc === pc && event.candidate) void this.send(call, 'ice', event.candidate.toJSON()).catch(() => {})
@@ -251,4 +252,5 @@ export class CallController {
     this.release()
   }
 }
+
 

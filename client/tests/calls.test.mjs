@@ -102,3 +102,19 @@ test('Permission finishing after a cancelled call does not leave camera running'
   assert.equal(client.view.local, null)
   client.dispose()
 })
+
+test('Remote browser stream retains both audio and video tracks', async () => {
+  reset()
+  navigator.mediaDevices.getUserMedia = async () => new Stream(tracks())
+  const client = new CallController('me', () => {})
+  await client.start('dialog')
+  current = { ...current, status: 'accepted', version: 2 }
+  await client.sync()
+  const peer = Peer.instances[0]
+  const incoming = new Stream(tracks())
+  for (const track of incoming.getTracks()) peer.ontrack({ track, streams: [incoming] })
+  assert.equal(client.view.remote, incoming)
+  assert.deepEqual(client.view.remote.getTracks().map((track) => track.kind), ['audio', 'video'])
+  await client.finish()
+  client.dispose()
+})
