@@ -1,24 +1,16 @@
-# Zently design context
+# Zently visual integration
 
 ## Intent
-A Russian-language messenger for personal conversations, saved notes, and calls. The two user-approved Figma references are authoritative; this is an implementation, not another redesign.
+Apply the user's approved Zently messenger visual identity to the existing React client. The friend's Go/PostgreSQL/Pusher backend and WebRTC controller are authoritative and must remain unchanged.
 
 ## Visual language
-User avatars show the first two characters of the account username, uppercased, rather than contact labels, display names, or uploaded/sample photos. The online badge remains a separate overlay. Saved messages retain the bookmark icon.
-Three connected panels: navigation, conversations, active chat. Expanded navigation has labels, collapsed navigation has accessible names and tooltips. No dashboard or news home page. A saved-messages conversation is owned by the current user alone.
+Dark three-panel messenger, Manrope, #0B090E background, #141116 surfaces, #211C23 cards, #FF1493 pink and #B7FF39 lime. Pink outgoing bubbles, subtle pink edge light on incoming bubbles, lime navigation and send controls. Glass is limited to composer and call controls. No blue. Initial avatars use an account username when supplied, otherwise the existing account name; contact-label aliases are not introduced.
 
-## Tokens
-Runtime source of truth: `public/styles.css` `:root`.
-Background #0B090E; surfaces #141116; cards #211C23; pink #FF1493; deep pink #A90058; lime #B7FF39; text #FFFFFF; secondary #A6A0A9; divider #302530.
-Manrope is the interface font. Pink outgoing bubbles, subtle pink borders and restrained selected-chat glow. Lime selected navigation, presence and primary actions. Glass is limited to the composer and call toolbar. No blue or decorative waves.
+## Tokens and ownership
+Runtime visual tokens live in client/src/zently.css. Reusable Brand/Avatar are in client/src/Visual.tsx. Existing api.ts, calls.ts, RemoteAudio.tsx, main.tsx and the entire api directory remain unchanged. CallPanel.tsx changes layout, modal focus and optional synthesized audio only; it delegates start/accept/reject/end/device actions to the original CallController.
 
-## Behavior
-See UX-CONTRACT.md. The registration flow is phone and username, verification, then chats. Development authentication is explicitly labelled, never presented as real SMS. Calling a demo contact opens an explicitly labelled call preview; real registered contacts use WebRTC signaling. Never request microphone/camera before a user's call action.
-
-## Responsive layout
-Desktop: three panels. Compact desktop: collapsed rail. Mobile: conversation list and active conversation are separate views with a visible back action. Video retains separate call controls and accessible names.
+## Supported behavior
+Preserve email/password auth, original user search, pagination, message retry/idempotency, Pusher subscriptions, call polling and WebRTC media handling. This integration does not add unsupported backend capabilities or pretend that a Pusher publication is a read receipt. Mobile separates the conversation list and active chat, with a Back action. Call sound is a presentation-only preference.
 
 ## Verification
-Node integration tests exercise authentication, authorization, persistence, private saved messages and chat delivery. Browser checks cover registration, demo entry, sending, saved messages, search, profile and mobile navigation. Real cross-device calls require manual device verification and production STUN/TURN configuration.
-
-Composer refinement: rounded translucent glass for the attachment control and input capsule; focus highlights the capsule rather than the textarea rectangle. Incoming bubbles retain an opaque graphite fill with a restrained pink edge glow and local light spill.
+Original build, lint and four call-controller tests pass. See INTEGRATION.md for API checks, UI fixture coverage, protected-file verification and remaining gaps. Test fixtures stay outside the repository and are not shipped.

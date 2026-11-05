@@ -1,0 +1,14 @@
+@import "tailwindcss";
+@import './zently.css';
+
+@layer base {
+  body { @apply m-0 bg-slate-950 text-slate-100 antialiased; font-family: system-ui, sans-serif; }
+  button { @apply cursor-pointer transition disabled:cursor-not-allowed disabled:opacity-40; }
+  input, textarea { @apply w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm outline-none focus:border-teal-400; }
+  button:focus-visible, a:focus-visible { @apply outline-2 outline-offset-4 outline-teal-400; }
+}
+@layer components {
+  .primary { @apply inline-flex items-center justify-center gap-2 rounded-xl bg-teal-400 px-4 py-3 text-sm font-semibold text-slate-950 hover:bg-teal-300; }
+  .secondary { @apply inline-flex items-center justify-center gap-2 rounded-xl border border-slate-700 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800; }
+  .notice { @apply rounded-xl border border-amber-800 bg-amber-950/40 px-4 py-3 text-sm text-amber-200; }
+}

@@ -1,21 +1,10 @@
-# Zently UX contract
+# Integration behavior contract
 
-| Capability | Owner | Contract |
-| --- | --- | --- |
-| Form | app.js auth renderer | Labels, inline errors, preserved values, first invalid field focus, no native bubbles |
-| Search | app.js conversation list | Local filtering, clear action, empty state; no remote request race |
-| Feedback | app.js toast | One polite live region; persistent errors have inline correction paths |
-| Dialog | native dialog in app.js | Escape, initial focus, focus restoration; no browser alert/confirm/prompt |
-| Navigation | app.js state | Chats/Calls/Media/Saved/Archive/Settings; browser URL hash restores section |
-| Scrollbar | styles.css global baseline | Visible, low contrast graphite, pink hover, reduced-motion respected |
-| Saved messages | store.js | One self-only conversation per registered user, no other members allowed |
-| Authentication | server/index.js | HttpOnly same-site cookie; development challenge has expiry and attempt limit; no phone numbers in client contacts |
-| Call | call.js | Explicit permission action; visible pending/denied/offline states; end releases all tracks |
-
-Message drafts are retained per chat in session memory. Messages are persisted on the local server. Optimistic duplicate sends are prevented by a client message id. Profile and settings are shared across screens. No claim of end-to-end encryption is made.
-
-Phone registration uses one composite field: country/calling-code trigger and national number. The authored country picker opens above the field, supports local country/code search, arrow navigation, Enter selection, Escape and outside dismissal. It remembers only the chosen country. Full international pasted numbers are normalized without adding the calling code twice. Region detection is an editable timezone/locale suggestion, not location verification.
-
-Call audio uses a shared CallSounds controller. Outgoing ringback and incoming melody are exclusive and terminate on answer, cancellation, decline, timeout, connection failure, or sound preference disable. Autoplay failure gets an explicit incoming sound-enable button. Mobile call controls and incoming actions have at least 48px target height and respect safe-area insets.
-
-Message receipts are acknowledged only by the authenticated recipient, through a validated message in their chat. Delivery is client receipt acknowledgement, not proof of a human seeing a preview. Read acknowledgement requires the incoming message to intersect the visible chat area in a visible tab, outside the composer overlay, and without a modal/call obscuring it. Receipts are monotonic and persisted; no-repeat acknowledgements avoid SSE refresh loops. Saved notes have no peer receipt. User discovery searches usernames case-insensitively with optional @, and never exposes phone numbers.
+- Existing API payloads, cookies, query/mutation request functions and call-controller code are preserved.
+- Email/password is the actual supported authentication flow. Phone OTP is not invented by the skin.
+- User search keeps the existing backend semantics: name fragment or exact email. The backend has no unique username field.
+- Saved messages, archive, attachments, message delivery/read acknowledgements and presence are not provided by this API; the skin does not show fake working versions of them.
+- One dark message check means saved on the server; there is no unsupported delivery/read inference.
+- Native buttons and labels, visible rounded focus, mobile Back, modal call focus and reduced-motion support are maintained.
+- Synthesized ringing follows the existing call status. Audio stops on status change/unmount; blocked autoplay has an explicit sound-enable action. Server call expiry remains the friend's original behavior.
+- Technical connection information is retained in a collapsible connection section, without changing the original realtime logic.

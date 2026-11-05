@@ -1,8 +1,11 @@
-node_modules/
-data/
+/.codex/
+
+# Local secrets and generated Go files
 .env
 .env.*
 !.env.example
-*.log
-.DS_Store
-coverage/
+/api/bin/
+/api/tmp/
+/api/*.exe
+/api/coverage.out
+.neon
