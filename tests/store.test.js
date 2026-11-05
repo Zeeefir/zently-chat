@@ -5,6 +5,24 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Store, validateIdentity } from "../server/store.js";
 
+test('usernames are unique across accounts, case, @ prefix and restarts', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'zently-unique-'));
+  try {
+    const file = join(dir, 'db.json');
+    const store = await Store.open(file);
+    const owner = store.register('+77001234567', 'Stas_01');
+    assert.equal(owner.username, 'stas_01');
+    for (const variant of ['stas_01', 'STAS_01', '@Stas_01', ' stas_01 ']) {
+      assert.throws(() => store.register('+77007654321', variant), /занят/i);
+    }
+    assert.equal(store.register('+77001234567', '@STAS_01').id, owner.id);
+    await store.flush();
+    const reopened = await Store.open(file);
+    assert.throws(() => reopened.register('+77007654321', 'stas_01'), /занят/i);
+    assert.equal(reopened.data.users.filter(u => u.username === 'stas_01').length, 1);
+  } finally { await rm(dir, {recursive:true, force:true}); }
+});
+
 test("identity rejects malformed phones and names", () => {
   assert.throws(() => validateIdentity("abc", "alex"), /телефон/i);
   assert.throws(() => validateIdentity("+77001234567", "<script>"), /имя/i);

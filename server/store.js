@@ -99,7 +99,7 @@ export class Store {
     if (
       this.data.users.some((u) => u.username === username && u.phone !== phone)
     )
-      throw new Error("Это имя уже занято. Попробуйте другое.");
+      throw new Error("Этот юзер уже занят. Придумайте другой.");
   }
   register(phone, username) {
     const clean = validateIdentity(phone, username);
