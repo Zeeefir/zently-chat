@@ -99,6 +99,7 @@ async function boot() {
   try {
     await refresh();
     calls.user = data.user;
+    if (location.hash === '#media') history.replaceState(null, '', '#chats');
     const initial = location.hash.slice(1);
     if (navs.some((n) => n[0] === initial)) {
       section = initial;
@@ -214,7 +215,6 @@ function codeForm(result, values) {
 const navs = [
   ["chats", "chat", "Чаты"],
   ["calls", "phone", "Звонки"],
-  ["media", "folder", "Медиа"],
   ["saved", "bookmark", "Избранное"],
   ["archive", "archive", "Архив"],
   ["settings", "settings", "Настройки"],
@@ -272,11 +272,6 @@ function renderWorkspace() {
         icon("phone") +
         "<h2>Пока тихо</h2><p>Твои звонки появятся здесь.</p></div>"
     }</div></div>`;
-    return;
-  }
-  if (section === "media") {
-    w.innerHTML = `<div class="settings-panel">${ib("back", "Назад к чатам", "back")}<h1 class="section-title">Медиа</h1><p class="section-subtitle">Вложения из твоих переписок</p><div class="media-grid">Загрузка…</div></div>`;
-    loadMedia();
     return;
   }
   if (section === "archive" && !chat()?.archived) {
@@ -410,22 +405,6 @@ async function readAttachment(ev) {
       `${icon("file")}${e(file.name)}${ib("close", "Убрать вложение", "remove-attachment")}`;
   };
   reader.readAsDataURL(file);
-}
-async function loadMedia() {
-  const all = await Promise.all(
-    data.chats.map((c) => api(`/chats/${c.id}/messages`)),
-  );
-  const list = all.flatMap((v) => v.messages).filter((m) => m.attachment);
-  const grid = document.querySelector(".media-grid");
-  if (!grid) return;
-  grid.innerHTML =
-    list
-      .map(
-        (m) =>
-          `<a class="media-card" download="${e(m.attachment.name)}" href="${e(m.attachment.data)}">${m.attachment.type.startsWith("image/") ? `<img src="${e(m.attachment.data)}" alt="${e(m.attachment.name)}">` : icon("file")}<span>${e(m.attachment.name)}</span></a>`,
-      )
-      .join("") ||
-    '<p class="muted">Пока нет вложений. Отправь фотографию или PDF в чат.</p>';
 }
 function profile(own = false) {
   const p = own ? data.user : peer(chat());
