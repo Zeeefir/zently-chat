@@ -8,3 +8,4 @@
 /api/tmp/
 /api/*.exe
 /api/coverage.out
+.neon
